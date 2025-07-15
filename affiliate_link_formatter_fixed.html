@@ -1,0 +1,132 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Affiliate Link Formatter</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-top: 10px;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #4f46e5;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+    #copiedMsg {
+      display: none;
+      color: green;
+      margin-top: 5px;
+    }
+    #protocolWarning {
+      display: none;
+      color: #b91c1c;
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Affiliate Link Formatter</h2>
+    <label for="rawLink">Paste Your Replicated Link</label>
+    <input id="rawLink" type="text" placeholder="e.g. johndoe.LiveGood.com or ClickBank link">
+    <div id="protocolWarning">⚠️ Invalid link. Please check the format and try again.</div>
+    <button id="generateBtn">Generate Template Link</button>
+    <label for="result">Your Formatted Link</label>
+    <textarea id="result" readonly></textarea>
+    <div id="copiedMsg">✅ Copied to clipboard</div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const generateBtn = document.getElementById("generateBtn");
+      const rawInput = document.getElementById("rawLink");
+      const resultBox = document.getElementById("result");
+      const copiedMsg = document.getElementById("copiedMsg");
+      const warningBox = document.getElementById("protocolWarning");
+
+      generateBtn.addEventListener("click", function () {
+        let rawLink = rawInput.value.trim();
+        resultBox.value = '';
+        copiedMsg.style.display = 'none';
+        warningBox.style.display = 'none';
+
+        if (!rawLink) return;
+
+        if (!/^https?:\/\//i.test(rawLink)) {
+          rawLink = 'https://' + rawLink;
+        }
+
+        let formatted = '';
+        let matched = false;
+        const knownParams = ['id','ref','refid','affiliate','aff','partner','r','user','rep','distributor','sponsor','enroller','introducer','clientid','aid','cid','bid','track','tid','utm_source','tag'];
+        try {
+          const queryParamRegex = new RegExp('([?&])(' + knownParams.join('|') + ')=([^&]+)', 'i');
+          if (queryParamRegex.test(rawLink)) {
+            formatted = rawLink.replace(queryParamRegex, '$1$2={param.id}');
+            matched = true;
+          }
+
+          if (!matched && /(https?:\/\/)([^.]+)(\.hop\.clickbank\.net)/.test(rawLink)) {
+            formatted = rawLink.replace(/(https?:\/\/)([^.]+)(\.hop\.clickbank\.net)/, '$1{param.id}$3');
+            matched = true;
+          }
+
+          if (!matched && /\/\/([^\.]+)\./.test(rawLink)) {
+            formatted = rawLink.replace(/\/\/([^\.]+)\./, '//{param.id}.');
+            matched = true;
+          }
+
+          if (!matched && /\/[^\/?#]+$/.test(rawLink)) {
+            formatted = rawLink.replace(/\/[^\/?#]+$/, '/{param.id}');
+            matched = true;
+          }
+
+          if (matched) {
+            resultBox.value = formatted;
+          } else {
+            warningBox.style.display = 'block';
+          }
+        } catch (e) {
+          warningBox.style.display = 'block';
+        }
+      });
+
+      resultBox.addEventListener("click", function () {
+        if (!resultBox.value) return;
+        navigator.clipboard.writeText(resultBox.value).then(() => {
+          copiedMsg.style.display = "block";
+          setTimeout(() => copiedMsg.style.display = "none", 1500);
+        }).catch(() => alert("Copy failed. Please copy manually."));
+      });
+    });
+  </script>
+</body>
+</html>
