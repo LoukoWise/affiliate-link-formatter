@@ -1,132 +1,87 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Affiliate Link Formatter</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
-      font-family: sans-serif;
-      background: #f4f4f4;
-      margin: 0;
-      padding: 2rem;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #00bfff;
     }
     .container {
       max-width: 600px;
       margin: auto;
-      background: white;
+      background: #fff;
       padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      border-radius: 10px;
     }
     input, textarea, button {
       width: 100%;
-      padding: 10px;
+      padding: 12px;
       font-size: 1rem;
-      border-radius: 8px;
-      border: 1px solid #ccc;
       margin-top: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
       box-sizing: border-box;
     }
     button {
-      background-color: #4f46e5;
+      background-color: #007bff;
       color: white;
-      font-weight: bold;
       border: none;
+      font-weight: bold;
       cursor: pointer;
     }
-    #copiedMsg {
-      display: none;
-      color: green;
-      margin-top: 5px;
-    }
-    #protocolWarning {
-      display: none;
-      color: #b91c1c;
-      background: #fef2f2;
-      border: 1px solid #fca5a5;
-      padding: 10px;
-      border-radius: 8px;
+    #errorMsg {
+      color: red;
       margin-top: 10px;
+      display: none;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>Affiliate Link Formatter</h2>
-    <label for="rawLink">Paste Your Replicated Link</label>
-    <input id="rawLink" type="text" placeholder="e.g. johndoe.LiveGood.com or ClickBank link">
-    <div id="protocolWarning">⚠️ Invalid link. Please check the format and try again.</div>
-    <button id="generateBtn">Generate Template Link</button>
-    <label for="result">Your Formatted Link</label>
-    <textarea id="result" readonly></textarea>
-    <div id="copiedMsg">✅ Copied to clipboard</div>
+    <input id="userLink" type="text" placeholder="Enter full affiliate URL (must include http:// or https://)">
+    <button onclick="formatLink()">Generate</button>
+    <textarea id="result" readonly placeholder="Your formatted link will appear here"></textarea>
+    <div id="errorMsg">⚠️ Couldn’t detect an ID or username in the link.</div>
   </div>
 
   <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      const generateBtn = document.getElementById("generateBtn");
-      const rawInput = document.getElementById("rawLink");
-      const resultBox = document.getElementById("result");
-      const copiedMsg = document.getElementById("copiedMsg");
-      const warningBox = document.getElementById("protocolWarning");
+    function formatLink() {
+      const input = document.getElementById("userLink").value.trim();
+      const result = document.getElementById("result");
+      const error = document.getElementById("errorMsg");
 
-      generateBtn.addEventListener("click", function () {
-        let rawLink = rawInput.value.trim();
-        resultBox.value = '';
-        copiedMsg.style.display = 'none';
-        warningBox.style.display = 'none';
+      result.value = "";
+      error.style.display = "none";
 
-        if (!rawLink) return;
+      if (!input.startsWith("http://") && !input.startsWith("https://")) {
+        error.style.display = "block";
+        return;
+      }
 
-        if (!/^https?:\/\//i.test(rawLink)) {
-          rawLink = 'https://' + rawLink;
-        }
+      let formatted = "";
+      const queryRegex = /([?&])(ref|id|user|affiliate|aff|partner|rep)=([^&]+)/i;
 
-        let formatted = '';
-        let matched = false;
-        const knownParams = ['id','ref','refid','affiliate','aff','partner','r','user','rep','distributor','sponsor','enroller','introducer','clientid','aid','cid','bid','track','tid','utm_source','tag'];
-        try {
-          const queryParamRegex = new RegExp('([?&])(' + knownParams.join('|') + ')=([^&]+)', 'i');
-          if (queryParamRegex.test(rawLink)) {
-            formatted = rawLink.replace(queryParamRegex, '$1$2={param.id}');
-            matched = true;
-          }
+      if (queryRegex.test(input)) {
+        formatted = input.replace(queryRegex, "$1$2={param.id}");
+      } else if (/^https?:\/\/[^.]+\.hop\.clickbank\.net/i.test(input)) {
+        formatted = input.replace(/^https?:\/\/[^.]+/, "https://{param.id}");
+      } else if (/^https?:\/\/([^.]+)\.livegood\.com/i.test(input)) {
+        formatted = input.replace(/^https?:\/\/([^.]+)(\.livegood\.com)/i, "https://{param.id}$2");
+      } else if (/^https?:\/\/livegood\.com\/[^\/]+$/i.test(input)) {
+        formatted = input.replace(/^(https?:\/\/livegood\.com)\/[^\/]+$/i, "$1/{param.id}");
+      }
 
-          if (!matched && /(https?:\/\/)([^.]+)(\.hop\.clickbank\.net)/.test(rawLink)) {
-            formatted = rawLink.replace(/(https?:\/\/)([^.]+)(\.hop\.clickbank\.net)/, '$1{param.id}$3');
-            matched = true;
-          }
-
-          if (!matched && /\/\/([^\.]+)\./.test(rawLink)) {
-            formatted = rawLink.replace(/\/\/([^\.]+)\./, '//{param.id}.');
-            matched = true;
-          }
-
-          if (!matched && /\/[^\/?#]+$/.test(rawLink)) {
-            formatted = rawLink.replace(/\/[^\/?#]+$/, '/{param.id}');
-            matched = true;
-          }
-
-          if (matched) {
-            resultBox.value = formatted;
-          } else {
-            warningBox.style.display = 'block';
-          }
-        } catch (e) {
-          warningBox.style.display = 'block';
-        }
-      });
-
-      resultBox.addEventListener("click", function () {
-        if (!resultBox.value) return;
-        navigator.clipboard.writeText(resultBox.value).then(() => {
-          copiedMsg.style.display = "block";
-          setTimeout(() => copiedMsg.style.display = "none", 1500);
-        }).catch(() => alert("Copy failed. Please copy manually."));
-      });
-    });
+      if (formatted) {
+        result.value = formatted;
+      } else {
+        error.style.display = "block";
+      }
+    }
   </script>
 </body>
 </html>
